@@ -14,7 +14,7 @@ args = parser.parse_args()
 def calch(numGridPoints):
     return int(args.r)/numGridPoints
 
-def calcGroundState(numGridPoints, z):
+def calcGroundState(numGridPoints, z=int(args.z)):
     h = calch(numGridPoints)
 
     I = np.identity(numGridPoints)
@@ -44,7 +44,7 @@ def calcGroundState(numGridPoints, z):
 
     hamiltonian = -d_approx / 2 - r_tot + rsmall
 
-    return sorted(np.linalg.eig(hamiltonian).eigenvalues)[0:2]
+    return sorted(np.linalg.eig(hamiltonian).eigenvalues)[0]
 
 def calcGroundStateWithX(resolution, z):
     h = calch(resolution**2)**(1/2)
@@ -76,14 +76,10 @@ def calcGroundStateWithX(resolution, z):
     return min(np.linalg.eig(hamiltonian).eigenvalues)
 
 
-def nevilleAlgo(x, i, j):
-    print(i,j)
+def nevilleAlgo(i,j,z):
     if i == j:
-        return calcGroundState((i+4)*5)
+        return calcGroundState((i+4)*5,z)
     else:
-        print(i,j)
-        return ((x - calch((i+4)*5))*nevilleAlgo(x, i+1, j) - (x - calch((j+4)*5))*nevilleAlgo(x, i, j-1))/(calch((j+4)*5)-calch((i+4)*5))
+        return (nevilleAlgo(i,j-1,z)*calch((j+4)*5)**2-calch((i+4)*5)**2*nevilleAlgo(i+1,j,z))/(calch((j+4)*5)**2-calch((i+4)*5)**2)
 
-
-resolution = int(args.s)
-print(calcGroundState(resolution, int(args.z)))
+print(nevilleAlgo(0,4,int(args.z)))
