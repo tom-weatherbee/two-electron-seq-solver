@@ -1,6 +1,9 @@
 import numpy as np
 from scipy.linalg import eigh
 
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import axes3d
+
 def calc_r(i, h):
     return 1 / (i + 1) / h
 
@@ -33,8 +36,8 @@ def gs_eigensystem_r(r, size, z, eigvals_only=False):
     else:
         eigenvalues, eigenvectors = eigh(hamiltonian)
         gs = min(eigenvalues)
-        gs_index = np.where(eigensystem.eigenvalues == gs)[0][0]
-        gs_vec = eigensystem.eigenvectors[:,gs_index]
+        gs_index = np.where(eigenvalues == gs)[0][0]
+        gs_vec = eigenvectors[:,gs_index]
         return (gs, gs_vec)
 
 
@@ -54,8 +57,8 @@ def gs_eigensystem_x(r, size, z, eigvals_only=False):
     else:
         eigenvalues, eigenvectors = eigh(hamiltonian)
         gs = min(eigenvalues)
-        gs_index = np.where(eigensystem.eigenvalues == gs)[0][0]
-        gs_vec = eigensystem.eigenvectors[:,gs_index]
+        gs_index = np.where(eigenvalues == gs)[0][0]
+        gs_vec = eigenvectors[:,gs_index]
         return (gs, gs_vec)
 
 def nevilleAlgo(i,j,z):
@@ -66,4 +69,26 @@ def nevilleAlgo(i,j,z):
         hj2 = (9 / (j + 4) / 5)**2
         return (nevilleAlgo(i, j - 1, z) * hj2 - hi2 * nevilleAlgo(i + 1, j, z)) / (hj2 - hi2)
 
-print(nevilleAlgo(0, 4, 2))
+#print(nevilleAlgo(0, 4, 2))
+
+def graph(r, size, z):
+    fig = plt.figure()
+    ax = fig.add_subplot(projection='3d')
+
+    _, eigenvector = gs_eigensystem_r(r, size, z)
+
+    data = np.zeros((size, size))
+    X = np.arange(1, size + 1)
+    X, Y = np.meshgrid(X, X)
+
+    for i in range(size**2):
+        r1 = i // size
+        r2 = i % size
+        data[r1, r2] = eigenvector[i]
+
+    ax.plot_wireframe(X, Y, data)
+    ax.view_init(-150, 225)
+
+    plt.show()
+
+graph(9, 20, 2)
