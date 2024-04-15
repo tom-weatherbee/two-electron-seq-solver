@@ -100,7 +100,7 @@ def nevilleAlgo(i,j,spacing,startoffset,z,dptable):
     if f'{i}_{j}' in dptable:
         return dptable[f'{i}_{j}']
     if i == j:
-        out = gs_eigensystem_r(9, (i + startoffset) * spacing, z, True)
+        out = eigensystem_r(9, (i + startoffset) * spacing, z, 0 True)
         dptable[f'{i}_{j}'] = out
         return out
     else:
