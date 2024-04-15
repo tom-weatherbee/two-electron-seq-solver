@@ -46,36 +46,6 @@ def eigensystem_r(r, size, z, excitation, eigvals_only=False):
         gs_vec = eigenvectors[:,gs_index]
         return (gs, gs_vec)
 
-def eigensystem_test(r, size, z, excitation, eigvals_only=False):
-    h = r / size
-
-    I = np.identity(size)
-    second = (np.diag(-2 * np.ones(size)) + np.diag(np.ones(size - 1), k=1) + np.diag(np.ones(size - 1), k=-1)) / h**2
-    r = np.diag(np.array([calc_r(xi, h) for xi in range(size)]))
-    r_super = np.diag(np.array([calc_r_super(xi, h, size) for xi in range(size**2)]))
-    single = -second / 2 - z * r
-
-    hamiltonian = np.kron(single, I) + np.kron(I, single) + r_super
-
-    t0 = time.time()
-    eig_banded(hamiltonian, eigvals_only=True)
-    print("Banded: " + str(time.time() - t0))
-    
-    t0 = time.time()
-    eigh(hamiltonian, eigvals_only=True)
-    print("Hermitian: " + str(time.time() - t0))
-    
-    t0 = time.time()
-    dsbev(hamiltonian, compute_v=0)
-    print("dsbev: " + str(time.time() - t0))
-    
-    t0 = time.time()
-    tri = ssytrd(hamiltonian)
-    eigh_tridiagonal(tri)
-    print("dsbev: " + str(time.time() - t0))
-    
-eigensystem_test(9, 30, 2, 0)
-
 def eigensystem_x(r, size, z, excitation, eigvals_only=False):
     h = r / size
 
@@ -96,21 +66,35 @@ def eigensystem_x(r, size, z, excitation, eigvals_only=False):
         gs_vec = eigenvectors[:,gs_index]
         return (gs, gs_vec)
 
-def nevilleAlgo(i,j,spacing,startoffset,z,dptable):
-    if f'{i}_{j}' in dptable:
-        return dptable[f'{i}_{j}']
+def nevilleAlgo(i, j, spacing, startoffset, r, z, excitation):
+    return nevilleAlgoHelper(i, j, spacing, startoffset, r, z, excitation, {}, True)
+
+def nevilleAlgoHelper(i, j, spacing, startoffset, r, z, excitation, dptable, init):
+    if (i, j) in dptable:
+        return dptable[(i, j)]
     if i == j:
-        out = eigensystem_r(9, (i + startoffset) * spacing, z, 0, True)
-        dptable[f'{i}_{j}'] = out
+        out = eigensystem_r(r, (i + startoffset) * spacing, z, excitation, True)
+        dptable[(i, j)] = out
+        if init:
+            return dptable
         return out
     else:
-        hi2 = (9 / (i + startoffset) / spacing)**2
-        hj2 = (9 / (j + startoffset) / spacing)**2
-        out = (nevilleAlgo(i, j - 1, spacing, startoffset, z, dptable) * hj2 - hi2 * nevilleAlgo(i + 1, j, spacing, startoffset, z, dptable)) / (hj2 - hi2)
-        dptable[f'{i}_{j}'] = out
+        hi2 = (r / (i + startoffset) / spacing)**2
+        hj2 = (r / (j + startoffset) / spacing)**2
+        out = (nevilleAlgoHelper(i, j - 1, spacing, startoffset, r, z, excitation, dptable, False) * hj2 - hi2
+               * nevilleAlgoHelper(i + 1, j, spacing, startoffset, r, z, excitation, dptable, False)) / (hj2 - hi2)
+        dptable[(i, j)] = out
+        if init:
+            return dptable
         return out
 
-print(nevilleAlgo(i=0, j=4, spacing=5, startoffset=4, z=2,dptable={}))
+dp = nevilleAlgo(i=0, j=9, spacing=5, startoffset=4, r=9, z=2, excitation=0)
+
+for i in range(9):
+    s = ""
+    for j in range(i, 9):
+        s += str(dp[(i, j)]) + ", "
+    print(s.rstrip(" ,"))
 
 def graph(r, size, z, excitation):
     fig = plt.figure()
