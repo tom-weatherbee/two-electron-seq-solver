@@ -61,15 +61,21 @@ def gs_eigensystem_x(r, size, z, eigvals_only=False):
         gs_vec = eigenvectors[:,gs_index]
         return (gs, gs_vec)
 
-def nevilleAlgo(i,j,z):
+def nevilleAlgo(i,j,spacing,startoffset,z,dptable):
+    if f'{i}_{j}' in dptable:
+        return dptable[f'{i}_{j}']
     if i == j:
-        return gs_eigensystem_r(9, (i + 4) * 5, 2, True)
+        out = gs_eigensystem_r(9, (i + startoffset) * spacing, z, True)
+        dptable[f'{i}_{j}'] = out
+        return out
     else:
-        hi2 = (9 / (i + 4) / 5)**2
-        hj2 = (9 / (j + 4) / 5)**2
-        return (nevilleAlgo(i, j - 1, z) * hj2 - hi2 * nevilleAlgo(i + 1, j, z)) / (hj2 - hi2)
+        hi2 = (9 / (i + startoffset) / spacing)**2
+        hj2 = (9 / (j + startoffset) / spacing)**2
+        out = (nevilleAlgo(i, j - 1, spacing, startoffset, z, dptable) * hj2 - hi2 * nevilleAlgo(i + 1, j, spacing, startoffset, z, dptable)) / (hj2 - hi2)
+        dptable[f'{i}_{j}'] = out
+        return out
 
-#print(nevilleAlgo(0, 4, 2))
+print(nevilleAlgo(i=0, j=4, spacing=5, startoffset=4, z=2,dptable={}))
 
 def graph(r, size, z):
     fig = plt.figure()
