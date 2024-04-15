@@ -154,5 +154,42 @@ def overlap(r, size, z, excitation):
     m_overlap = np.diag(np.array([calc_r_overlap(1 / 3**0.5, 1, xi, h, size) for xi in range(size**2)]))
     print(gsl - vl.dot(np.matmul(m_overlap, vr)))
 
-overlap(9, 20, 2, 0)
+#overlap(9, 20, 2, 0)
 
+
+
+def eigensystem(r, size, z, excitation, eigvals_only=False):
+    h = r / size
+
+    I = np.identity(size)
+    second = (np.diag(-2 * np.ones(size)) + np.diag(np.ones(size - 1), k=1) + np.diag(np.ones(size - 1), k=-1)) / h**2
+    r = np.diag(np.array([calc_r(xi, h) for xi in range(size)]))
+    r_super = np.diag(np.array([calc_r_super(xi, h, size) for xi in range(size**2)]))
+    single = -second / 2 - z * r
+
+    hamiltonian = np.kron(single, I) + np.kron(I, single) + r_super
+
+    eigenvalues, eigenvectors = eigh(hamiltonian)
+    gs = np.partition(eigenvalues, excitation)[excitation]
+    gs_index = np.where(eigenvalues == gs)[0][0]
+    gs_vec = eigenvectors[:,gs_index]
+
+    print(gs_vec.dot(np.matmul(np.kron(single ,I) + np.kron(I, single), gs_vec)))
+    print(gs_vec.dot(np.matmul(r_super, gs_vec)))
+
+    stupid = np.ones(size**2).transpose()
+    stupid = np.kron(stupid, np.array([1, 0]))
+
+    print(stupid.dot(np.matmul(np.kron(np.kron(single ,I) + np.kron(I, single), np.identity(2)), stupid)))
+    print(stupid.dot(np.matmul(np.kron(r_super, np.identity(2)), stupid)))
+    
+
+    #if eigvals_only:
+    #    return np.partition(eigh(hamiltonian, eigvals_only=True), excitation)[excitation]
+    #else:
+    #    eigenvalues, eigenvectors = eigh(hamiltonian)
+    #    gs = np.partition(eigenvalues, excitation)[excitation]
+    #    gs_index = np.where(eigenvalues == gs)[0][0]
+    #    gs_vec = eigenvectors[:,gs_index]
+    #    return (gs, gs_vec)
+eigensystem(9, 20, 2, 0)
