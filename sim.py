@@ -118,21 +118,24 @@ def graph(r, size, z, excitation):
 
 #graph(9, 20, 2, 1)
 
-def calc_r_overlap(i, h, size):
+def calc_r_l(z, power, i, h):
+    return z / (i + 1)**power / h**power
+
+def calc_r_overlap(constant, k, i, h, size):
     r1 = i % size + 1
     r2 = i // size + 1
-    return (min(r1, r2) / max(r1, r2)**2 / h / 3**0.5)
+    return constant * min(r1, r2)**k / max(r1, r2)**(k + 1) / h
 
-def eigensystem_l(r, size, z, excitation, eigvals_only=False):
+def eigensystem_l1(r, size, z, excitation, eigvals_only=False):
     h = r / size
 
     I = np.identity(size)
     second = (np.diag(-2 * np.ones(size)) + np.diag(np.ones(size - 1), k=1) + np.diag(np.ones(size - 1), k=-1)) / h**2
-    r = np.diag(np.array([calc_r(xi, h) for xi in range(size)]))
-    r_super = np.diag(np.array([calc_r_overlap(xi, h, size) for xi in range(size**2)]))
-    single = -second / 2 - z * r
+    r = np.diag(np.array([calc_r_l(z, 1, xi, h) for xi in range(size)])) - np.diag(np.array([calc_r_l(1, 2, xi, h) for xi in range(size)]))
+    r_overlap = np.diag(np.array([calc_r_overlap(2/3, 0, xi, h, size) for xi in range(size**2)])) + np.diag(np.array([calc_r_overlap(4/15, 2, xi, h, size) for xi in range(size**2)]))
+    single = -second / 2 - r
 
-    hamiltonian = np.kron(single, I) + np.kron(I, single) + r_super
+    hamiltonian = np.kron(single, I) + np.kron(I, single) + r_overlap
 
     if eigvals_only:
         return np.partition(eigh(hamiltonian, eigvals_only=True), excitation)[excitation]
@@ -143,56 +146,13 @@ def eigensystem_l(r, size, z, excitation, eigvals_only=False):
         gs_vec = eigenvectors[:,gs_index]
         return (gs, gs_vec)
 
+def overlap(r, size, z, excitation):
+    h = r / size
+    gsl, vl = eigensystem_l1(r, size, z, excitation)
+    _, vr = eigensystem_r(r, size, z, excitation)
 
+    m_overlap = np.diag(np.array([calc_r_overlap(1 / 3**0.5, 1, xi, h, size) for xi in range(size**2)]))
+    print(gsl - vl.dot(np.matmul(m_overlap, vr)))
 
-def overlap(radius, size, z, excitation):
-    r_super = np.kron(np.diag(np.array([calc_r_overlap(xi, radius / size, size) for xi in range(size**2)])), np.identity(2))
+overlap(9, 20, 2, 0)
 
-    gsl, vl = eigensystem_l(radius, size, z, excitation)
-    gsr, vr = eigensystem_r(radius, size, z, excitation)
-
-
-    vl = np.kron(vl, np.array([1, 1]).transpose())
-    vr = np.kron(vr, np.array([1, 0]).transpose())
-
-    temp = np.matmul(r_super, vr)
-
-    print(gsl)
-    print(gsr)
-    print(vl.dot(temp))
-
-    return gsl + vl.dot(temp)
-
-
-print(overlap(9, 20, 2, 0))
-
-
-
-def nevilleAlgoTest(i, j, spacing, startoffset, r, z, excitation):
-    return nevilleAlgoHelper(i, j, spacing, startoffset, r, z, excitation, {}, True)
-
-def nevilleAlgoHelperTest(i, j, spacing, startoffset, r, z, excitation, dptable, init):
-    if (i, j) in dptable:
-        return dptable[(i, j)]
-    if i == j:
-        out = overlap(r, (i + startoffset) * spacing, z, excitation)
-        dptable[(i, j)] = out
-        if init:
-            return dptable
-        return out
-    else:
-        hi2 = (r / (i + startoffset) / spacing)**2
-        hj2 = (r / (j + startoffset) / spacing)**2
-        out = (nevilleAlgoHelperTest(i, j - 1, spacing, startoffset, r, z, excitation, dptable, False) * hj2 - hi2
-               * nevilleAlgoHelperTest(i + 1, j, spacing, startoffset, r, z, excitation, dptable, False)) / (hj2 - hi2)
-        dptable[(i, j)] = out
-        if init:
-            return dptable
-        return out
-
-#dp = nevilleAlgoTest(i=0, j=7, spacing=5, startoffset=4, r=9, z=2, excitation=0)
-#for i in range(7):
-#    s = ""
-#    for j in range(i, 7):
-#        s += str(dp[(i, j)]) + ", "
-#    print(s.rstrip(" ,"))
