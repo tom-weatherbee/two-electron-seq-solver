@@ -26,7 +26,7 @@ def calc_x_super(i, h, size):
     x2 = i // size + 1
     return 1 / max(x1, x2)**2 / h**2
 
-def eigensystem_r(r, size, z, excitation, eigvals_only=False, full=False):
+def eigensystem_r(r, size, z, excitation=-1, eigvals_only=False):
     h = r / size
 
     I = np.identity(size)
@@ -38,11 +38,11 @@ def eigensystem_r(r, size, z, excitation, eigvals_only=False, full=False):
     hamiltonian = np.kron(single, I) + np.kron(I, single) + r_super
 
     if eigvals_only:
-        if full:
+        if excitation == -1:
             return eigh(hamiltonian, eigvals_only=True)
         return np.partition(eigh(hamiltonian, eigvals_only=True), excitation)[excitation]
     else:
-        if full:
+        if excitation == -1:
             return eigh(hamiltonian)
         eigenvalues, eigenvectors = eigh(hamiltonian)
         gs = np.partition(eigenvalues, excitation)[excitation]
@@ -100,11 +100,9 @@ def nevilleAlgoHelper(i, j, spacing, startoffset, r, z, excitation, dptable, ini
 #        s += str(dp[(i, j)]) + ", "
 #    print(s.rstrip(" ,"))
 
-def graph(r, size, z, excitation):
-    fig = plt.figure()
+def graph(eigenvector, size, excitation):
+    fig = plt.figure(dpi=300)
     ax = fig.add_subplot(projection='3d')
-
-    gs, eigenvector = eigensystem_r(r, size, z, excitation, False, True)
 
     data = np.zeros((size, size))
     X = np.arange(1, size + 1)
@@ -117,12 +115,18 @@ def graph(r, size, z, excitation):
 
     ax.plot_wireframe(X, Y, data)
     ax.view_init(25, 45)
-    plt.savefig(str(excitation) + 'wireframe.png')
+    #plt.show()
+    plt.savefig(str(excitation).zfill(3) + '_wireframe.png', transparent=True)
+    plt.close()
 
-graph(9, 60, 2, 0)
-graph(9, 60, 2, 1)
-graph(9, 60, 2, 2)
-graph(9, 60, 2, 3)
+#es, evs = eigensystem_r(r=9, size=60, z=1)
+
+#for i in range(100):
+#    e = np.partition(es, i)[i]
+#    index = np.where(es == e)[0][0]
+#    vec = evs[:,index]
+
+#    graph(vec, 60, i)
 
 def calc_r_l(z, power, i, h):
     return z / (i + 1)**power / h**power
@@ -134,6 +138,9 @@ def calc_r_overlap(constant, k, i, h, size):
 
 def eigensystem_l1(r, size, z, excitation, eigvals_only=False):
     h = r / size
+    
+    gs0, phi0 = eigensystem_r(r, size, z, excitation)
+    phi_overlap = np.matmul(np.diag(np.array([calc_r_overlap(1/3**0.5, 1, xi, h, size) for xi in range(size**2)])), phi0)
 
     I = np.identity(size)
     second = (np.diag(-2 * np.ones(size)) + np.diag(np.ones(size - 1), k=1) + np.diag(np.ones(size - 1), k=-1)) / h**2
@@ -142,60 +149,13 @@ def eigensystem_l1(r, size, z, excitation, eigvals_only=False):
     single = -second / 2 - r
 
     hamiltonian = np.kron(single, I) + np.kron(I, single) + r_overlap
+    phi1 = np.zeros(size**2).transpose()
 
-    if eigvals_only:
-        return np.partition(eigh(hamiltonian, eigvals_only=True), excitation)[excitation]
-    else:
-        eigenvalues, eigenvectors = eigh(hamiltonian)
-        gs = np.partition(eigenvalues, excitation)[excitation]
-        gs_index = np.where(eigenvalues == gs)[0][0]
-        gs_vec = eigenvectors[:,gs_index]
-        return (gs, gs_vec)
-
-def eigensystem_l2(r, size, z, excitation, eigvals_only=False):
-    h = r / size
-
-    I = np.identity(size)
-    second = (np.diag(-2 * np.ones(size)) + np.diag(np.ones(size - 1), k=1) + np.diag(np.ones(size - 1), k=-1)) / h**2
-    r = np.diag(np.array([calc_r_l(z, 1, xi, h) for xi in range(size)])) - np.diag(np.array([calc_r_l(3, 2, xi, h) for xi in range(size)]))
-    r_overlap = (np.diag(np.array([calc_r_overlap(1, 0, xi, h, size) for xi in range(size**2)]))
-                 + np.diag(np.array([calc_r_overlap(2/7, 2, xi, h, size) for xi in range(size**2)]))
-                 + np.diag(np.array([calc_r_overlap(2/7, 4, xi, h, size) for xi in range(size**2)])))
-    single = -second / 2 - r
-
-    hamiltonian = np.kron(single, I) + np.kron(I, single) + r_overlap
-
-    if eigvals_only:
-        return np.partition(eigh(hamiltonian, eigvals_only=True), excitation)[excitation]
-    else:
-        eigenvalues, eigenvectors = eigh(hamiltonian)
-        gs = np.partition(eigenvalues, excitation)[excitation]
-        gs_index = np.where(eigenvalues == gs)[0][0]
-        gs_vec = eigenvectors[:,gs_index]
-        return (gs, gs_vec)
-
-def overlap(v, h, size):
-    r_overlap = np.diag(np.array([calc_r_overlap(1/3**0.5, 1, xi, h, size) for xi in range(size**2)]))
-
-    return np.matmul(r_overlap, v)
-
-def graphl(r, size, z, excitation):
-    fig = plt.figure()
-    ax = fig.add_subplot(projection='3d')
-
-    gs2, ev2 = eigensystem_l2(r, size, z, excitation)
-    gs1, ev = eigensystem_l1(r, size, z, excitation)
-    gs0, ev0 = eigensystem_r(r, size, z, excitation)
-
-    data = np.zeros((size, size))
-    X = np.arange(1, size + 1)
-    X, Y = np.meshgrid(X, X)
+    eigenvalues, eigenvectors = eigh(hamiltonian)
 
     for i in range(size**2):
-        r1 = i // size
-        r2 = i % size
-        data[r1, r2] = ev[i]**2
-    ax.contour(X, Y, data)
-    ax.view_init(-150, 225)
+        phi1 = eigenvectors[:,i] * eigenvectors[:,i].dot(phi_overlap) / (eigenvalues[i] - 1 / gs0)
 
-    plt.show()
+    graph(phi1, size)
+
+eigensystem_l1(9, 30, 2, 0)
