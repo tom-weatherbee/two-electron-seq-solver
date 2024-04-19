@@ -70,6 +70,8 @@ def eigensystem_x(r, size, z, excitation, eigvals_only=False):
         gs_vec = eigenvectors[:,gs_index]
         return (gs, gs_vec)
 
+print(eigensystem_x(3, 20, 2, 0, True))
+
 def nevilleAlgo(i, j, spacing, startoffset, r, z, excitation):
     return nevilleAlgoHelper(i, j, spacing, startoffset, r, z, excitation, {}, True)
 
@@ -119,76 +121,11 @@ def graph_contour(eigenvector, size, excitation):
     plt.savefig(str(excitation).zfill(3) + '_contour.png', transparent=True)
     plt.close()
 
-es, evs = eigensystem_r(r=9, size=60, z=2)
+#es, evs = eigensystem_r(r=9, size=60, z=2)
 
-for i in range(100):
-    e = np.partition(es, i)[i]
-    index = np.where(es == e)[0][0]
-    vec = evs[:,index]
-
-    graph_contour(vec, 60, i)
-
-def calc_r_l(z, power, i, h):
-    return z / (i + 1)**power / h**power
-
-def calc_r_overlap(constant, k, i, h, size):
-    r1 = i % size + 1
-    r2 = i // size + 1
-    return constant * min(r1, r2)**k / max(r1, r2)**(k + 1) / h
-
-def eigensystem_l1(r, size, z, excitation):
-    h = r / size
-    
-    gs0, phi0 = eigensystem_r(r, size, z, excitation)
-    phi_overlap = np.matmul(np.diag(np.array([calc_r_overlap(1/3**0.5, 1, xi, h, size) for xi in range(size**2)])), phi0)
-
-    I = np.identity(size)
-    second = (np.diag(-2 * np.ones(size)) + np.diag(np.ones(size - 1), k=1) + np.diag(np.ones(size - 1), k=-1)) / h**2
-    r = np.diag(np.array([calc_r_l(z, 1, xi, h) for xi in range(size)])) - np.diag(np.array([calc_r_l(1, 2, xi, h) for xi in range(size)]))
-    r_overlap = np.diag(np.array([calc_r_overlap(1, 0, xi, h, size) for xi in range(size**2)])) + np.diag(np.array([calc_r_overlap(2/5, 2, xi, h, size) for xi in range(size**2)]))
-    single = -second / 2 - r
-
-    hamiltonian = np.kron(single, I) + np.kron(I, single) + r_overlap
-    phi1 = np.zeros(size**2).transpose()
-
-    eigenvalues, eigenvectors = eigh(hamiltonian)
-
-    print(min(eigenvalues))
-
-    for i in range(size**2):
-        phi1 += eigenvectors[:,i] * eigenvectors[:,i].dot(phi_overlap) / (gs0 - eigenvalues[i])
-
-    gs1 = phi1.dot(np.matmul(hamiltonian, phi1))
-    #phi1 = phi1 / np.linalg.norm(phi1)
-
-    
-    return (gs0, phi0, gs1, phi1)
-    #graph(phi1, size)
-
-def eigensystem_l2(r, size, z, excitation, eigvals_only=False):
-    h = r / size
-    
-    gs0, phi0, gs1, phi1 = eigensystem_l1(r, size, z, excitation)
-    phi0_overlap = np.matmul(np.diag(np.array([calc_r_overlap(1/5**0.5, 2, xi, h, size) for xi in range(size**2)])), phi0)
-    phi1_overlap = np.matmul(np.diag(np.array([calc_r_overlap(2/15**0.5, 1, xi, h, size) for xi in range(size**2)]))
-                             + np.diag(np.array([calc_r_overlap(.33197, 3, xi, h, size) for xi in range(size**2)])), phi1)
-
-    I = np.identity(size)
-    second = (np.diag(-2 * np.ones(size)) + np.diag(np.ones(size - 1), k=1) + np.diag(np.ones(size - 1), k=-1)) / h**2
-    r = np.diag(np.array([calc_r_l(z, 1, xi, h) for xi in range(size)])) - np.diag(np.array([calc_r_l(3, 2, xi, h) for xi in range(size)]))
-    r_overlap = (np.diag(np.array([calc_r_overlap(1, 0, xi, h, size) for xi in range(size**2)]))
-                 + np.diag(np.array([calc_r_overlap(2/7, 2, xi, h, size) for xi in range(size**2)]))
-                 + np.diag(np.array([calc_r_overlap(2/7, 4, xi, h, size) for xi in range(size**2)])))
-    single = -second / 2 - r
-
-    hamiltonian = np.kron(single, I) + np.kron(I, single) + r_overlap
-    phi2 = np.zeros(size**2).transpose()
-
-    eigenvalues, eigenvectors = eigh(hamiltonian)
-
-    for i in range(size**2):
-        phi2 += eigenvectors[:,i] * (eigenvectors[:,i].dot(phi0_overlap) + eigenvectors[:,i].dot(phi1_overlap)) / (gs0 - eigenvalues[i])
-    
-    print(phi2.dot(np.matmul(hamiltonian, phi2)))
-    #graph_contour(phi2, size, 3)
-
+#for i in range(100):
+#    e = np.partition(es, i)[i]
+#    index = np.where(es == e)[0][0]
+#    vec = evs[:,index]
+#
+#    graph_contour(vec, 60, i)
