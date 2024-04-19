@@ -81,4 +81,7 @@ def nevilleAlgo(i,j,z):
     else:
         return (nevilleAlgo(i,j-1,z)*calch((j+4)*5)**2-calch((i+4)*5)**2*nevilleAlgo(i+1,j,z))/(calch((j+4)*5)**2-calch((i+4)*5)**2)
 
-print(nevilleAlgo(0,4,int(args.z)))
+resses = [20,25,30,40,45,50,55,60]
+
+for res in resses:
+    print(res, calcGroundStateWithX(res, 2))
